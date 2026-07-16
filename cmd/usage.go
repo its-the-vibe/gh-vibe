@@ -69,7 +69,7 @@ func runUsage(_ *cobra.Command, _ []string) error {
 
 	// Fetch the usage data
 	var response UsageResponse
-	endpoint := fmt.Sprintf("users/%s/settings/billing/premium_request/usage", username)
+	endpoint := fmt.Sprintf("users/%s/settings/billing/ai_credit/usage", username)
 	err = client.Get(endpoint, &response)
 	if err != nil {
 		return fmt.Errorf("failed to fetch usage data: %w", err)
