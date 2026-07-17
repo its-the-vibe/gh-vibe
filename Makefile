@@ -1,7 +1,7 @@
 .PHONY: build test vet
 
 build:
-	go build ./...
+	go build
 
 test:
 	go test -v ./...
