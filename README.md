@@ -1,5 +1,7 @@
 # gh-vibe
 
+[![CI](https://github.com/its-the-vibe/gh-vibe/actions/workflows/ci.yaml/badge.svg)](https://github.com/its-the-vibe/gh-vibe/actions/workflows/ci.yaml)
+
 A GitHub CLI extension that contains a collection of commonly used commands for vibe coding workflows.
 
 ## Installation
@@ -52,13 +54,19 @@ gh vibe usage --summary  # Show only total gross quantity
 ### Build
 
 ```bash
-go build .
+make build
 ```
 
 ### Test
 
 ```bash
-go test -v ./...
+make test
+```
+
+### Vet
+
+```bash
+make vet
 ```
 
 ### Install locally

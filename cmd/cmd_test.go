@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"testing"
 )
 
@@ -261,5 +262,67 @@ func TestUsageCommandHasSummaryFlag(t *testing.T) {
 	}
 	if flag.Shorthand != "s" {
 		t.Errorf("Expected summary flag shorthand to be 's', got '%s'", flag.Shorthand)
+	}
+}
+
+func TestUsageResponseUnmarshal(t *testing.T) {
+	raw := `{
+		"timePeriod": {"year": 2025, "month": 7},
+		"user": "octocat",
+		"usageItems": [
+			{
+				"product": "copilot",
+				"sku": "premium",
+				"model": "gpt-4",
+				"unitType": "tokens",
+				"pricePerUnit": 0.01,
+				"grossQuantity": 100.5,
+				"grossAmount": 1.005,
+				"discountQuantity": 10.0,
+				"discountAmount": 0.1,
+				"netQuantity": 90.5,
+				"netAmount": 0.905
+			}
+		]
+	}`
+
+	var resp UsageResponse
+	if err := json.Unmarshal([]byte(raw), &resp); err != nil {
+		t.Fatalf("Failed to unmarshal UsageResponse: %v", err)
+	}
+
+	if resp.User != "octocat" {
+		t.Errorf("Expected user 'octocat', got '%s'", resp.User)
+	}
+	if resp.TimePeriod.Year != 2025 {
+		t.Errorf("Expected year 2025, got %d", resp.TimePeriod.Year)
+	}
+	if resp.TimePeriod.Month != 7 {
+		t.Errorf("Expected month 7, got %d", resp.TimePeriod.Month)
+	}
+	if len(resp.UsageItems) != 1 {
+		t.Fatalf("Expected 1 usage item, got %d", len(resp.UsageItems))
+	}
+	item := resp.UsageItems[0]
+	if item.GrossQuantity != 100.5 {
+		t.Errorf("Expected GrossQuantity 100.5, got %f", item.GrossQuantity)
+	}
+	if item.NetQuantity != 90.5 {
+		t.Errorf("Expected NetQuantity 90.5, got %f", item.NetQuantity)
+	}
+}
+
+func TestUsageResponseTotalGrossQuantity(t *testing.T) {
+	resp := UsageResponse{
+		UsageItems: []UsageItem{
+			{GrossQuantity: 10.0},
+			{GrossQuantity: 20.5},
+			{GrossQuantity: 5.25},
+		},
+	}
+
+	expected := 35.75
+	if got := resp.TotalGrossQuantity(); got != expected {
+		t.Errorf("Expected TotalGrossQuantity %.2f, got %.2f", expected, got)
 	}
 }
