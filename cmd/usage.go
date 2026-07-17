@@ -76,12 +76,7 @@ func runUsage(_ *cobra.Command, _ []string) error {
 	}
 
 	if summaryFlag {
-		// Calculate total gross quantity
-		var totalGrossQuantity float64
-		for _, item := range response.UsageItems {
-			totalGrossQuantity += item.GrossQuantity
-		}
-		fmt.Printf("%.1f\n", totalGrossQuantity)
+		fmt.Printf("%.1f\n", response.TotalGrossQuantity())
 	} else {
 		// Output full JSON response
 		output, err := json.MarshalIndent(response, "", "  ")
@@ -92,6 +87,15 @@ func runUsage(_ *cobra.Command, _ []string) error {
 	}
 
 	return nil
+}
+
+// TotalGrossQuantity returns the sum of GrossQuantity across all usage items.
+func (r UsageResponse) TotalGrossQuantity() float64 {
+	var total float64
+	for _, item := range r.UsageItems {
+		total += item.GrossQuantity
+	}
+	return total
 }
 
 func getAuthenticatedUser(client *api.RESTClient) (string, error) {
