@@ -3,7 +3,7 @@ module github.com/vibe-chung/gh-vibe
 go 1.27.1
 
 require (
-	github.com/cli/go-gh/v2 v2.16.0
+	github.com/cli/go-gh/v2 v2.16.1
 	github.com/spf13/cobra v1.10.2
 )
 
