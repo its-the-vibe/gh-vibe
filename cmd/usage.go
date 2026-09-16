@@ -3,12 +3,18 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/cli/go-gh/v2/pkg/api"
 	"github.com/spf13/cobra"
 )
 
-var summaryFlag bool
+var (
+	summaryFlag bool
+	yearFlag    int
+	monthFlag   int
+	dayFlag     int
+)
 
 var usageCmd = &cobra.Command{
 	Use:   "usage",
@@ -17,7 +23,13 @@ var usageCmd = &cobra.Command{
 
 By default, outputs the full JSON response from the GitHub API.
 
-With the --summary flag, only the total gross quantity is displayed.`,
+With the --summary flag, only the total gross quantity is displayed.
+
+Optional flags --year (-y), --month (-m), and --day (-d) allow filtering
+billing usage data by specific time periods:
+  gh vibe usage --year 2024 --month 11
+  gh vibe usage --year 2024 --month 11 --day 15
+  gh vibe usage --summary --year 2024 --month 11`,
 	Args: cobra.NoArgs,
 	RunE: runUsage,
 }
@@ -25,6 +37,9 @@ With the --summary flag, only the total gross quantity is displayed.`,
 func init() {
 	rootCmd.AddCommand(usageCmd)
 	usageCmd.Flags().BoolVarP(&summaryFlag, "summary", "s", false, "Show total gross quantity instead of full JSON")
+	usageCmd.Flags().IntVarP(&yearFlag, "year", "y", 0, "Specify the year (e.g., 2024)")
+	usageCmd.Flags().IntVarP(&monthFlag, "month", "m", 0, "Specify the month (e.g., 1-12)")
+	usageCmd.Flags().IntVarP(&dayFlag, "day", "d", 0, "Specify the day (e.g., 1-31)")
 }
 
 // UsageResponse represents the billing usage response from the GitHub API
@@ -37,7 +52,8 @@ type UsageResponse struct {
 // TimePeriod represents the billing period
 type TimePeriod struct {
 	Year  int `json:"year"`
-	Month int `json:"month"`
+	Month int `json:"month,omitempty"`
+	Day   int `json:"day,omitempty"`
 }
 
 // UsageItem represents a single usage item
@@ -55,6 +71,25 @@ type UsageItem struct {
 	NetAmount        float64 `json:"netAmount"`
 }
 
+// buildUsageEndpoint constructs the API endpoint with optional query parameters.
+func buildUsageEndpoint(username string, year, month, day int) string {
+	endpoint := fmt.Sprintf("users/%s/settings/billing/ai_credit/usage", username)
+	var queryParams []string
+	if year > 0 {
+		queryParams = append(queryParams, fmt.Sprintf("year=%d", year))
+	}
+	if month > 0 {
+		queryParams = append(queryParams, fmt.Sprintf("month=%d", month))
+	}
+	if day > 0 {
+		queryParams = append(queryParams, fmt.Sprintf("day=%d", day))
+	}
+	if len(queryParams) > 0 {
+		endpoint = fmt.Sprintf("%s?%s", endpoint, strings.Join(queryParams, "&"))
+	}
+	return endpoint
+}
+
 func runUsage(_ *cobra.Command, _ []string) error {
 	client, err := api.DefaultRESTClient()
 	if err != nil {
@@ -69,7 +104,7 @@ func runUsage(_ *cobra.Command, _ []string) error {
 
 	// Fetch the usage data
 	var response UsageResponse
-	endpoint := fmt.Sprintf("users/%s/settings/billing/ai_credit/usage", username)
+	endpoint := buildUsageEndpoint(username, yearFlag, monthFlag, dayFlag)
 	err = client.Get(endpoint, &response)
 	if err != nil {
 		return fmt.Errorf("failed to fetch usage data: %w", err)

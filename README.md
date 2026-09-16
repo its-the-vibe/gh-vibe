@@ -45,8 +45,11 @@ gh vibe ready-merge 123  # Specify a PR number
 Show Copilot premium request usage summary for the authenticated user.
 
 ```bash
-gh vibe usage            # Show full JSON response
-gh vibe usage --summary  # Show only total gross quantity
+gh vibe usage                                    # Show full JSON response
+gh vibe usage --summary                          # Show only total gross quantity
+gh vibe usage --year 2024 --month 11             # Filter by specific month
+gh vibe usage --year 2024 --month 11 --day 15    # Filter by specific date
+gh vibe usage --summary --year 2024 --month 11   # Summary for specific month
 ```
 
 ## Development

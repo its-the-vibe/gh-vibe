@@ -326,3 +326,217 @@ func TestUsageResponseTotalGrossQuantity(t *testing.T) {
 		t.Errorf("Expected TotalGrossQuantity %.2f, got %.2f", expected, got)
 	}
 }
+
+func TestUsageCommandHasYearFlag(t *testing.T) {
+	flag := usageCmd.Flags().Lookup("year")
+	if flag == nil {
+		t.Error("usageCmd should have a 'year' flag")
+		return
+	}
+	if flag.DefValue != "0" {
+		t.Errorf("Expected year flag default to be '0', got '%s'", flag.DefValue)
+	}
+	if flag.Shorthand != "y" {
+		t.Errorf("Expected year flag shorthand to be 'y', got '%s'", flag.Shorthand)
+	}
+}
+
+func TestUsageCommandHasMonthFlag(t *testing.T) {
+	flag := usageCmd.Flags().Lookup("month")
+	if flag == nil {
+		t.Error("usageCmd should have a 'month' flag")
+		return
+	}
+	if flag.DefValue != "0" {
+		t.Errorf("Expected month flag default to be '0', got '%s'", flag.DefValue)
+	}
+	if flag.Shorthand != "m" {
+		t.Errorf("Expected month flag shorthand to be 'm', got '%s'", flag.Shorthand)
+	}
+}
+
+func TestUsageCommandHasDayFlag(t *testing.T) {
+	flag := usageCmd.Flags().Lookup("day")
+	if flag == nil {
+		t.Error("usageCmd should have a 'day' flag")
+		return
+	}
+	if flag.DefValue != "0" {
+		t.Errorf("Expected day flag default to be '0', got '%s'", flag.DefValue)
+	}
+	if flag.Shorthand != "d" {
+		t.Errorf("Expected day flag shorthand to be 'd', got '%s'", flag.Shorthand)
+	}
+}
+
+func TestBuildUsageEndpoint(t *testing.T) {
+	tests := []struct {
+		name     string
+		username string
+		year     int
+		month    int
+		day      int
+		expected string
+	}{
+		{
+			name:     "no parameters",
+			username: "octocat",
+			year:     0,
+			month:    0,
+			day:      0,
+			expected: "users/octocat/settings/billing/ai_credit/usage",
+		},
+		{
+			name:     "year only",
+			username: "octocat",
+			year:     2024,
+			month:    0,
+			day:      0,
+			expected: "users/octocat/settings/billing/ai_credit/usage?year=2024",
+		},
+		{
+			name:     "month only",
+			username: "octocat",
+			year:     0,
+			month:    11,
+			day:      0,
+			expected: "users/octocat/settings/billing/ai_credit/usage?month=11",
+		},
+		{
+			name:     "day only",
+			username: "octocat",
+			year:     0,
+			month:    0,
+			day:      15,
+			expected: "users/octocat/settings/billing/ai_credit/usage?day=15",
+		},
+		{
+			name:     "year and month",
+			username: "octocat",
+			year:     2024,
+			month:    11,
+			day:      0,
+			expected: "users/octocat/settings/billing/ai_credit/usage?year=2024&month=11",
+		},
+		{
+			name:     "year and day",
+			username: "octocat",
+			year:     2024,
+			month:    0,
+			day:      15,
+			expected: "users/octocat/settings/billing/ai_credit/usage?year=2024&day=15",
+		},
+		{
+			name:     "month and day",
+			username: "octocat",
+			year:     0,
+			month:    11,
+			day:      15,
+			expected: "users/octocat/settings/billing/ai_credit/usage?month=11&day=15",
+		},
+		{
+			name:     "year, month, and day",
+			username: "octocat",
+			year:     2024,
+			month:    11,
+			day:      15,
+			expected: "users/octocat/settings/billing/ai_credit/usage?year=2024&month=11&day=15",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := buildUsageEndpoint(tc.username, tc.year, tc.month, tc.day)
+			if result != tc.expected {
+				t.Errorf("Expected endpoint %q, got %q", tc.expected, result)
+			}
+		})
+	}
+}
+
+func TestUsageResponseUnmarshalWithDay(t *testing.T) {
+	raw := `{
+		"timePeriod": {"year": 2025, "month": 7, "day": 15},
+		"user": "octocat",
+		"usageItems": [
+			{
+				"product": "copilot",
+				"sku": "premium",
+				"model": "gpt-4",
+				"unitType": "tokens",
+				"pricePerUnit": 0.01,
+				"grossQuantity": 100.5,
+				"grossAmount": 1.005,
+				"discountQuantity": 10.0,
+				"discountAmount": 0.1,
+				"netQuantity": 90.5,
+				"netAmount": 0.905
+			}
+		]
+	}`
+
+	var resp UsageResponse
+	if err := json.Unmarshal([]byte(raw), &resp); err != nil {
+		t.Fatalf("Failed to unmarshal UsageResponse: %v", err)
+	}
+
+	if resp.TimePeriod.Year != 2025 {
+		t.Errorf("Expected year 2025, got %d", resp.TimePeriod.Year)
+	}
+	if resp.TimePeriod.Month != 7 {
+		t.Errorf("Expected month 7, got %d", resp.TimePeriod.Month)
+	}
+	if resp.TimePeriod.Day != 15 {
+		t.Errorf("Expected day 15, got %d", resp.TimePeriod.Day)
+	}
+}
+
+func TestUsageFlagsParsing(t *testing.T) {
+	// Save initial flag values
+	origSummary := summaryFlag
+	origYear := yearFlag
+	origMonth := monthFlag
+	origDay := dayFlag
+	defer func() {
+		summaryFlag = origSummary
+		yearFlag = origYear
+		monthFlag = origMonth
+		dayFlag = origDay
+	}()
+
+	// Test long flag names
+	err := usageCmd.ParseFlags([]string{"--year", "2024", "--month", "11", "--day", "15", "--summary"})
+	if err != nil {
+		t.Fatalf("Failed to parse flags: %v", err)
+	}
+	if yearFlag != 2024 {
+		t.Errorf("Expected yearFlag 2024, got %d", yearFlag)
+	}
+	if monthFlag != 11 {
+		t.Errorf("Expected monthFlag 11, got %d", monthFlag)
+	}
+	if dayFlag != 15 {
+		t.Errorf("Expected dayFlag 15, got %d", dayFlag)
+	}
+	if !summaryFlag {
+		t.Error("Expected summaryFlag to be true")
+	}
+
+	// Test shorthand flag names
+	err = usageCmd.ParseFlags([]string{"-y", "2023", "-m", "5", "-d", "1", "-s"})
+	if err != nil {
+		t.Fatalf("Failed to parse shorthand flags: %v", err)
+	}
+	if yearFlag != 2023 {
+		t.Errorf("Expected yearFlag 2023, got %d", yearFlag)
+	}
+	if monthFlag != 5 {
+		t.Errorf("Expected monthFlag 5, got %d", monthFlag)
+	}
+	if dayFlag != 1 {
+		t.Errorf("Expected dayFlag 1, got %d", dayFlag)
+	}
+	if !summaryFlag {
+		t.Error("Expected summaryFlag to be true")
+	}
+}
